@@ -222,7 +222,11 @@ def experts_file(native: Path) -> None:
         return
     sys.path.insert(0, str(ROOT / "metal" / "tools"))
     import stream_experts as X
-    need = X.size_bytes(native) / 1e9
+    try:
+        need = X.size_bytes(native) / 1e9
+    except Exception as e:
+        S.warn(f"the experts' streaming copy is not applicable for {native.name} ({e}); engine streams directly from the model file")
+        return
     free = S.free_gb(native.parent)
     if not os.access(native.parent, os.W_OK):
         S.warn(f"{native.parent} cannot be written: the experts' streaming copy ({need:.0f} GB) is not written; the "
