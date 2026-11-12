@@ -374,6 +374,7 @@ void ExpertStream::promote_slot(int s) {
 bool ExpertStream::make_arena(mtl::Context& cx, uint64_t budget, const std::string& profile, int min_slots, std::string& err,
                               const std::function<uint64_t()>& recheck, const std::function<bool(uint64_t)>& grow) {
     const double t0 = now_ms();
+    err.clear();
     shrink_to_ = 0;
     for (auto& k : cls_) k.n = 0;   // a second try (after a shrink) lays the arena out again
     // the ranking: the profile's pairs, then every pair it misses, layer-interleaved

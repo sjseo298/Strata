@@ -1690,7 +1690,7 @@ bool Window::stream_arena(std::string& err) {
     }
     std::string prof;
     if (const char* e = std::getenv("STRATA_METAL_EXPERT_PROFILE")) prof = e;
-    else prof = strata_metal::resource(nullptr, "data", STRATA_METAL_DATA_DEFAULT) + "/expert-profile.bin";
+    else prof = strata_metal::resource(nullptr, "data", STRATA_METAL_DATA_DEFAULT) + (nexp_ == 256 ? "/expert-profile-coder.bin" : "/expert-profile.bin");
     std::fprintf(stderr, "strata metal stream: %.2f GB allocated before the arena (the process holds %.2f GB, %.2f GB resident); "
                          "RAM %.1f GB (%.1f GB available, %.1f GB kept for macOS), GPU working set %.1f GB\n", used / gb,
                  pm0.footprint / gb, pm0.rss / gb, phys / gb, avail / gb, keep / gb, cx_->recommended_working_set() / gb);
@@ -1710,11 +1710,14 @@ bool Window::stream_arena(std::string& err) {
     const bool pg_on = !(epg && std::string(epg) == "0");
     bool minimal = false;   // the arena's least layout (the min slots) is not shrunk further: it goes ahead, filled in steps
     for (int tries = 0;; ++tries) {
+        err.clear();
         const double planned = budget;
         std::function<uint64_t()> recheck = [&]() -> uint64_t { return (uint64_t) arena_shrink(am, planned, avail_now()); };
         if (st_->make_arena(*cx_, (uint64_t) budget, prof, pg_on ? 576 : 64, err, minimal ? std::function<uint64_t()>() : recheck,
-                            [&](uint64_t step) { return arena_grow(am, avail_now(), (double) step); }))
+                            [&](uint64_t step) { return arena_grow(am, avail_now(), (double) step); })) {
+            err.clear();
             break;
+        }
         if (st_->shrink_to() == 0 || tries == 4) return false;
         if ((double) st_->shrink_to() + 64.0 * (1 << 20) >= budget) minimal = true;   // no smaller layout than this one
         std::fprintf(stderr, "strata metal stream: less memory is free than when the arena was planned: %.1f -> %.1f GB\n",
